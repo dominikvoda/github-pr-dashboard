@@ -1,18 +1,19 @@
 import React from 'react';
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRenderCellParams, } from '@mui/x-data-grid';
 import { getResponse } from "../GitHub/Api";
 import { Avatar, AvatarGroup, Badge, Chip, Link } from "@mui/material";
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import JiraLink from "./JiraLink";
+import { createEmptyFilter, PullRequestFilter } from "./PullRequestFilter";
+import { getLabelStyle, GithubLabel } from "../GitHub/GithubLabel";
 
 TimeAgo.addDefaultLocale(en)
 let timeAgo = new TimeAgo();
 
 export interface PullRequestTableProps {
-  selectedRepositories: any,
-  selectedLabels: any
+  pullRequestFilter: PullRequestFilter,
 }
 
 const columns: GridColDef[] = [
@@ -29,15 +30,8 @@ const columns: GridColDef[] = [
         </Link>
         <span>
           {
-            (params.getValue(params.id, 'labels') as any).map((label: any) => {
-              const style = {
-                backgroundColor: '#' + label.color,
-                marginLeft: '3px',
-                color: '#fff',
-                fontSize: '12px',
-                fontWeight: 600
-              }
-              return (<Chip label={label.name} size="small" style={style} sx={{height: 18}}/>)
+            (params.getValue(params.id, 'labels') as any).map((label: GithubLabel) => {
+              return (<Chip label={label.name} size="small" style={getLabelStyle(label)} sx={{height: 18}}/>)
             })
           }
         </span>
@@ -113,17 +107,17 @@ const columns: GridColDef[] = [
 export default function PullRequestTable(props: PullRequestTableProps) {
 
   const [rows, setRows] = React.useState([])
-  const [repositoryFetched, setRepositoryFetched] = React.useState([]);
+  const [repositoryFetchedByFilter, setRepositoryFetchedByFilter] = React.useState(createEmptyFilter);
 
   const loadPullRequests = async (): Promise<void> => {
     let filters = ''
 
-    props.selectedRepositories.forEach((repository: any) => (
+    props.pullRequestFilter.repositories.forEach((repository: any) => (
       filters += ' repo:BrandEmbassy/' + repository
     ))
 
-    props.selectedLabels.forEach((label: any) => (
-      filters += ' label:"' + label + '"'
+    props.pullRequestFilter.labels.forEach((label: GithubLabel) => (
+      filters += ' label:"' + label.name + '"'
     ))
 
     if (filters === '') {
@@ -145,11 +139,11 @@ export default function PullRequestTable(props: PullRequestTableProps) {
       assignees: pr.assignees,
       comments: pr.comments
     })));
-    setRepositoryFetched(props.selectedRepositories)
+    setRepositoryFetchedByFilter(props.pullRequestFilter)
   }
 
   React.useEffect(() => {
-    if (repositoryFetched !== props.selectedRepositories) {
+    if (repositoryFetchedByFilter !== props.pullRequestFilter) {
       loadPullRequests()
     }
   });
@@ -159,11 +153,10 @@ export default function PullRequestTable(props: PullRequestTableProps) {
       <DataGrid
         rows={rows}
         columns={columns}
-        disableColumnFilter
-        disableColumnMenu
         hideFooter
         autoHeight
-        disableSelectionOnClick/>
+        disableSelectionOnClick
+      />
     </div>
   );
 }

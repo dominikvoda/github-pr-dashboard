@@ -1,6 +1,6 @@
 import React from 'react';
 import { getResponse } from "../GitHub/Api";
-import { Avatar, Card, CardHeader } from "@mui/material";
+import { Avatar } from "@mui/material";
 import Logout from "./Logout";
 
 export default function Profile() {
@@ -20,15 +20,10 @@ export default function Profile() {
   });
 
   return (
-    <Card style={{position: 'relative'}}>
-      <CardHeader
-        avatar={
-          <Avatar aria-label="recipe" src={ghProfile.avatar_url}/>
-        }
-        title={ghProfile.name}
-        subheader={ghProfile.login}
-      />
+    <div className="d-flex align-items-center" style={{color: '#ffffff'}}>
+      <Avatar src={ghProfile.avatar_url}/>
+      <span style={{marginLeft: '10px', marginRight: '20px'}}>{ghProfile.name}</span>
       <Logout/>
-    </Card>
+    </div>
   );
 }

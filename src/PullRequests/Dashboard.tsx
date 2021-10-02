@@ -4,39 +4,43 @@ import Profile from "../Profile/Profile";
 import PullRequestTable from "./PullRequestTable";
 import React from "react";
 import LabelFilter from "./LabelFilter";
+import { createEmptyFilter, PullRequestFilter } from "./PullRequestFilter";
 
 export default function Dashboard() {
-  const [selectedRepositories, setSelectedRepositories] = React.useState<string[]>(() => {
-    const stored = localStorage.getItem('selectedRepositories');
+  const [pullRequestFilter, setPullRequestFilter] = React.useState<PullRequestFilter>(() => {
+    const stored = localStorage.getItem('pullRequestFilter');
     if (stored === null) {
-      return [];
+      return createEmptyFilter()
     }
-    return JSON.parse(stored);
-  });
 
-  const [selectedLabels, setSelectedLabels] = React.useState<string[]>(() => {
-    const stored = localStorage.getItem('selectedLabels');
-    if (stored === null) {
-      return [];
-    }
     return JSON.parse(stored);
   });
 
   const handleChangeRepositories = (selectedRepositories: any) => {
-    setSelectedRepositories(selectedRepositories);
-    localStorage.setItem('selectedRepositories', JSON.stringify(selectedRepositories))
+    const newPullRequestFilter: PullRequestFilter = {
+      repositories: selectedRepositories,
+      labels: pullRequestFilter.labels
+    }
+
+    setPullRequestFilter(newPullRequestFilter)
+    localStorage.setItem('pullRequestFilter', JSON.stringify(newPullRequestFilter))
   };
 
   const handleChangeLabels = (selectedLabels: any) => {
-    setSelectedLabels(selectedLabels);
-    localStorage.setItem('selectedLabels', JSON.stringify(selectedLabels))
+    const newPullRequestFilter: PullRequestFilter = {
+      repositories: pullRequestFilter.repositories,
+      labels: selectedLabels
+    }
+
+    setPullRequestFilter(newPullRequestFilter)
+    localStorage.setItem('pullRequestFilter', JSON.stringify(newPullRequestFilter))
   };
 
   return (
     <div>
       <Navbar bg="dark" variant="dark">
         <Container>
-          <Navbar.Brand href="/" className="text-center w-100">
+          <Navbar.Brand href="/">
             <img
               alt=""
               src="/logo.svg"
@@ -46,23 +50,25 @@ export default function Dashboard() {
             />{' '}
             Pull Requests
           </Navbar.Brand>
+          <Navbar.Collapse className="justify-content-end">
+            <Profile/>
+          </Navbar.Collapse>
         </Container>
       </Navbar>
       <Container fluid style={{marginTop: '20px'}}>
         <Row>
-          <Col md={6}>
-            <RepositoryFilter selectedRepositories={selectedRepositories} onSelectedRepositoriesChange={handleChangeRepositories}/>
+          <Col md={5}>
+            <RepositoryFilter pullRequestFilter={pullRequestFilter} onSelectedRepositoriesChange={handleChangeRepositories}/>
           </Col>
           <Col md={3}>
-            <LabelFilter selectedRepositories={selectedRepositories} selectedLabels={selectedLabels} onSelectedLabelsChange={handleChangeLabels}/>
+            <LabelFilter pullRequestFilter={pullRequestFilter} onSelectedLabelsChange={handleChangeLabels}/>
           </Col>
           <Col md={3}>
-            <Profile/>
           </Col>
         </Row>
         <Row style={{marginTop: '20px'}}>
           <Col>
-            <PullRequestTable selectedRepositories={selectedRepositories} selectedLabels={selectedLabels} />
+            <PullRequestTable pullRequestFilter={pullRequestFilter}/>
           </Col>
         </Row>
       </Container>

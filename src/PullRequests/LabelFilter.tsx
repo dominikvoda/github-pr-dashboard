@@ -1,99 +1,79 @@
 import React from "react";
-import { Theme, useTheme } from "@mui/material/styles";
 import { getResponse } from "../GitHub/Api";
-import { Box, Chip, FormControl, InputLabel, MenuItem, OutlinedInput, Select, SelectChangeEvent } from "@mui/material";
-import arrayUnique from "array-unique";
-
-const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-      width: 250,
-    },
-  },
-};
+import { Autocomplete, Chip, TextField } from "@mui/material";
+import { PullRequestFilter } from "./PullRequestFilter";
+import { getLabelStyle, GithubLabel } from "../GitHub/GithubLabel";
 
 export interface LabelFilterProps {
-  selectedRepositories: any,
-  selectedLabels: any,
+  pullRequestFilter: PullRequestFilter,
   onSelectedLabelsChange: (selectedLabels: any) => void
 }
 
 export default function LabelFilter(props: LabelFilterProps) {
-
-  const [allLabels, setAllLabels] = React.useState<string[]>([]);
-  const [labelsLoaded, setLabelsLoaded] = React.useState(false);
-  const theme = useTheme();
-
-  function getStyles(repositoryName: string, selectedRepositories: readonly string[], theme: Theme) {
-    return {
-      fontWeight:
-        selectedRepositories.indexOf(repositoryName) === -1
-          ? theme.typography.fontWeightRegular
-          : theme.typography.fontWeightMedium,
-    };
-  }
+  const [allLabels, setAllLabels] = React.useState<GithubLabel[]>([]);
+  const [labelsLoaded, setLabelsLoaded] = React.useState<PullRequestFilter|null>(null);
 
   const loadLabels = async (): Promise<void> => {
-    const allLabels = props.selectedRepositories.map(function (repository: string) {
+    const allLabels = props.pullRequestFilter.repositories.map(function (repository: string) {
       return loadLabelsInRepository(repository)
     })
 
-    Promise.all(allLabels).then((result: any) => {
-      let allLabels = arrayUnique([].concat.apply([], result));
-      setAllLabels(allLabels)
-      setLabelsLoaded(true)
+    Promise.all(allLabels).then((result: GithubLabel[][]) => {
+      let filteredLabels: GithubLabel[] = []
+
+      result.forEach((labels: GithubLabel[]) => {
+        labels.forEach((label: GithubLabel) => {
+          if (!filteredLabels.some(filteredLabel => filteredLabel.name === label.name)) {
+            filteredLabels.push(label)
+          }
+        })
+      })
+
+      setAllLabels(filteredLabels)
+      setLabelsLoaded(props.pullRequestFilter)
     })
   }
 
-  const loadLabelsInRepository = async (repository: string): Promise<any> => {
-    const labels = await getResponse('/repos/BrandEmbassy/' + repository + '/labels')
-
-    return labels.map((label: any) => {
-      return label.name
-    })
+  const loadLabelsInRepository = async (repository: string): Promise<GithubLabel[]> => {
+    return await getResponse('/repos/BrandEmbassy/' + repository + '/labels')
   }
 
   React.useEffect(() => {
-    if (!labelsLoaded) {
+    if (labelsLoaded !== props.pullRequestFilter) {
       loadLabels()
     }
   });
 
-  const handleChange = (event: SelectChangeEvent<typeof allLabels>) => {
-    props.onSelectedLabelsChange(event.target.value)
+  const handleChange = (event: React.SyntheticEvent, value: Array<string>): void => {
+    props.onSelectedLabelsChange(allLabels.filter((label) => value.includes(label.name)))
   };
 
+  function getLabelByName(labelName: string): GithubLabel {
+    return  props.pullRequestFilter.labels.filter(label => label.name === labelName)[0];
+  }
+
   return (
-    <FormControl fullWidth>
-      <InputLabel id="labels-label">Labels</InputLabel>
-      <Select
-        labelId="labels-label"
-        multiple
-        value={props.selectedLabels}
-        onChange={handleChange}
-        input={<OutlinedInput id="select-multiple-chip" label="Chip"/>}
-        renderValue={(selected) => (
-          <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 0.5}}>
-            {selected.map((value) => (
-              <Chip key={value} label={value} size="small"/>
-            ))}
-          </Box>
-        )}
-        MenuProps={MenuProps}
-      >
-        {allLabels.map((name) => (
-          <MenuItem
-            key={name}
-            value={name}
-            style={getStyles(name, props.selectedLabels, theme)}
-          >
-            {name}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
+    <Autocomplete
+      multiple
+      id="tags-standard"
+      options={allLabels.map((label) => label.name)}
+      value={props.pullRequestFilter.labels.map((label) => label.name)}
+      onChange={handleChange}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          variant="standard"
+          label="Labels"
+          placeholder="Review ready"
+        />
+      )}
+      renderTags={(value: readonly string[], getTagProps) =>
+        value.map((option: string, index: number) => (
+          <Chip
+            label={option} {...getTagProps({index})}
+            size="small" style={getLabelStyle(getLabelByName(option))} sx={{height: 18}}/>
+        ))
+      }
+    />
   )
 }

@@ -8,8 +8,8 @@ export default function Logout() {
   }
 
   return (
-    <IconButton style={{position: 'absolute', top: '16px', right: '10px'}} aria-label="delete" onClick={handleClick}>
-      <LogoutIcon/>
+    <IconButton aria-label="delete" onClick={handleClick}>
+      <LogoutIcon style={{color: '#ffffff'}}/>
     </IconButton>
   );
 }

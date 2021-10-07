@@ -39,7 +39,7 @@ export default function Dashboard() {
   return (
     <div>
       <Navbar bg="dark" variant="dark">
-        <Container>
+        <Container fluid>
           <Navbar.Brand href="/">
             <img
               alt=""

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getResponse } from "../GitHub/Api";
+import { getJsonResponse } from "../GitHub/Api";
 import { Avatar } from "@mui/material";
 import Logout from "./Logout";
 
@@ -8,7 +8,7 @@ export default function Profile() {
   const [profileLoaded, setProfileLoaded] = React.useState(false);
 
   const loadProfile = async (): Promise<void> => {
-    const profileData = await getResponse('/user')
+    const profileData = await getJsonResponse('/user')
     setGhProfile(profileData);
     setProfileLoaded(true)
   }

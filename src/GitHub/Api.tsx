@@ -1,13 +1,18 @@
-export const getResponse = async (endpoint: string): Promise<any> => {
+export const getJsonResponse = async (endpoint: string): Promise<any> => {
   const url = 'https://api.github.com' + endpoint;
+
+  const response = await getResponse(url)
+
+  return await response.json();
+}
+
+export const getResponse = async (url: string): Promise<Response> => {
   const token = localStorage.getItem('githubToken')
 
-  const response = await fetch(url, {
+  return fetch(url, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + token
     }
   })
-
-  return await response.json();
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { getResponse } from "../GitHub/Api";
+import { getJsonResponse } from "../GitHub/Api";
 import { Autocomplete, Chip, TextField } from "@mui/material";
 import { PullRequestFilter } from "./PullRequestFilter";
 import { getLabelStyle, GithubLabel } from "../GitHub/GithubLabel";
@@ -11,7 +11,6 @@ export interface LabelFilterProps {
 
 export default function LabelFilter(props: LabelFilterProps) {
   const [allLabels, setAllLabels] = React.useState<GithubLabel[]>([]);
-  const [labelsLoaded, setLabelsLoaded] = React.useState<PullRequestFilter|null>(null);
 
   const loadLabels = async (): Promise<void> => {
     const allLabels = props.pullRequestFilter.repositories.map(function (repository: string) {
@@ -30,19 +29,16 @@ export default function LabelFilter(props: LabelFilterProps) {
       })
 
       setAllLabels(filteredLabels)
-      setLabelsLoaded(props.pullRequestFilter)
     })
   }
 
   const loadLabelsInRepository = async (repository: string): Promise<GithubLabel[]> => {
-    return await getResponse('/repos/BrandEmbassy/' + repository + '/labels')
+    return await getJsonResponse('/repos/BrandEmbassy/' + repository + '/labels')
   }
 
   React.useEffect(() => {
-    if (labelsLoaded !== props.pullRequestFilter) {
-      loadLabels()
-    }
-  });
+    loadLabels()
+  }, [props.pullRequestFilter]);
 
   const handleChange = (event: React.SyntheticEvent, value: Array<string>): void => {
     props.onSelectedLabelsChange(allLabels.filter((label) => value.includes(label.name)))

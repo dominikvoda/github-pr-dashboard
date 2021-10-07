@@ -1,6 +1,6 @@
 import React from 'react';
 import { DataGrid, GridColDef, GridRenderCellParams, } from '@mui/x-data-grid';
-import { getResponse } from "../GitHub/Api";
+import { getJsonResponse, getResponse } from "../GitHub/Api";
 import { Avatar, AvatarGroup, Badge, Chip, Link } from "@mui/material";
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'
@@ -8,6 +8,8 @@ import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import JiraLink from "./JiraLink";
 import { createEmptyFilter, PullRequestFilter } from "./PullRequestFilter";
 import { getLabelStyle, GithubLabel } from "../GitHub/GithubLabel";
+import PullRequestChanges from "./PullRequestChanges";
+import ReviewStatus from "./ReviewStatus";
 
 TimeAgo.addDefaultLocale(en)
 let timeAgo = new TimeAgo();
@@ -20,7 +22,7 @@ const columns: GridColDef[] = [
   {
     field: 'title',
     headerName: 'Title',
-    flex: 4,
+    flex: 3,
     renderCell: params => (
       <div>
         <Link href={params.getValue(params.id, 'link') as string}
@@ -39,8 +41,31 @@ const columns: GridColDef[] = [
     )
   },
   {
+    field: 'reviews',
+    headerName: 'Reviews',
+    align: 'center',
+    headerAlign: 'center',
+    flex: 1,
+    sortable: false,
+    renderCell: params => (
+      <ReviewStatus pullRequest={params.getValue(params.id, 'pullRequest') as any}/>
+    )
+  },
+  {
+    field: 'changes',
+    headerName: 'Changes',
+    align: 'center',
+    headerAlign: 'center',
+    flex: 0.5,
+    renderCell: params => (
+      <PullRequestChanges pullRequest={params.getValue(params.id, 'pullRequest') as any}/>
+    )
+  },
+  {
     field: 'author',
     headerName: 'Author',
+    align: 'center',
+    headerAlign: 'center',
     flex: 1,
     renderCell: params => (
       <Link href={'https://github.com/' + params.value} target={'_blank'} underline={'hover'}>
@@ -56,7 +81,12 @@ const columns: GridColDef[] = [
       </Link>
     )
   },
-  {field: 'createdAt', headerName: 'Created At', width: 120},
+  {
+    field: 'createdAt', headerName: 'Created At', width: 120,
+    renderCell: params => (
+      timeAgo.format(new Date(params.value as string))
+    )
+  },
   {
     field: 'repository',
     headerName: 'Repository',
@@ -70,7 +100,9 @@ const columns: GridColDef[] = [
   {
     field: 'assignees',
     headerName: 'Assignees',
-    flex: 0.8,
+    align: 'center',
+    headerAlign: 'center',
+    width: 120,
     renderCell: (params: GridRenderCellParams) => (
       <div>
         <AvatarGroup>
@@ -86,6 +118,8 @@ const columns: GridColDef[] = [
   {
     field: 'comments',
     headerName: 'Comments',
+    align: 'center',
+    headerAlign: 'center',
     flex: 0.5,
     renderCell: params => (
       <Badge badgeContent={params.getValue(params.id, 'comments')} color="primary" showZero>
@@ -97,6 +131,8 @@ const columns: GridColDef[] = [
     field: 'jira',
     headerName: 'JIRA',
     sortable: false,
+    align: 'center',
+    headerAlign: 'center',
     flex: 0.5,
     renderCell: params => (
       <JiraLink prTitle={params.getValue(params.id, 'title') as string}/>
@@ -105,11 +141,10 @@ const columns: GridColDef[] = [
 ];
 
 export default function PullRequestTable(props: PullRequestTableProps) {
-
-  const [rows, setRows] = React.useState([])
-  const [repositoryFetchedByFilter, setRepositoryFetchedByFilter] = React.useState(createEmptyFilter);
+  const [rows, setRows] = React.useState<any[]>([])
 
   const loadPullRequests = async (): Promise<void> => {
+    setRows([])
     let filters = ''
 
     props.pullRequestFilter.repositories.forEach((repository: any) => (
@@ -124,29 +159,41 @@ export default function PullRequestTable(props: PullRequestTableProps) {
       filters = ' org:BrandEmbassy'
     }
 
-    const pullRequestsData = await getResponse('/search/issues?q=' + encodeURIComponent('is:pr is:open ' + filters))
+    const issuesResponse = await getJsonResponse('/search/issues?q=' + encodeURIComponent('is:pr is:open ' + filters))
 
-    setRows(pullRequestsData.items.map((pr: any) => ({
-      id: pr.number,
-      number: pr.number,
-      title: pr.title,
-      author: pr.user.login,
-      labels: pr.labels,
-      link: pr.html_url,
-      repository: pr.repository_url.split('/').pop(),
-      avatarUrl: pr.user.avatar_url,
-      createdAt: timeAgo.format(new Date(pr.created_at)),
-      assignees: pr.assignees,
-      comments: pr.comments
-    })));
-    setRepositoryFetchedByFilter(props.pullRequestFilter)
+    issuesResponse.items.map((pr: any) => {
+      return getResponse(pr.pull_request.url)
+        .then(response => response.json())
+        .then(pullRequest => {
+          const row = {
+            id: pullRequest.number,
+            number: pullRequest.number,
+            title: pullRequest.title,
+            author: pullRequest.user.login,
+            labels: pullRequest.labels,
+            link: pullRequest.html_url,
+            repository: pullRequest.base.repo.name,
+            avatarUrl: pullRequest.user.avatar_url,
+            createdAt: pullRequest.created_at,
+            assignees: pullRequest.assignees,
+            comments: pullRequest.comments + pullRequest.review_comments,
+            pullRequest: pullRequest,
+            changes: pullRequest.additions + pullRequest.deletions,
+            reviews: ''
+          }
+
+          setRows(
+            rows => [...rows, row]
+              .sort((a: any, b: any): number => {
+                return a.createdAt < b.createdAt ? 1 : -1
+              }))
+        })
+    })
   }
 
   React.useEffect(() => {
-    if (repositoryFetchedByFilter !== props.pullRequestFilter) {
-      loadPullRequests()
-    }
-  });
+    loadPullRequests()
+  }, [props.pullRequestFilter]);
 
   return (
     <div style={{display: 'flex', marginBottom: '20px'}}>

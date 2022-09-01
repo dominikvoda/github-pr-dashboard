@@ -1,6 +1,6 @@
 import React from "react";
 import { Autocomplete, Chip, TextField } from "@mui/material";
-import { getJsonResponse } from "../GitHub/Api";
+import { getAllRepositoryNames } from "../GitHub/Api";
 import { PullRequestFilter } from "./PullRequestFilter";
 
 
@@ -14,13 +14,11 @@ export default function RepositoryFilter(props: RepositoryFilterProps) {
 
   const [allRepositories, setAllRepositories] = React.useState<string[]>([]);
 
-  const loadRepositories = async (): Promise<void> => {
-    const repositories = await getJsonResponse('/orgs/BrandEmbassy/repos?sort=updated&per_page=100')
-
-    setAllRepositories(repositories.map((repository: any) => (repository.name)));
-  }
-
   React.useEffect(() => {
+    const loadRepositories = async (): Promise<void> => {
+      const repositories = await getAllRepositoryNames()
+      setAllRepositories(repositories)
+    }
     loadRepositories()
   }, [props.pullRequestFilter]);
 

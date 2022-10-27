@@ -5,8 +5,13 @@ import PullRequestTable from "./PullRequestTable";
 import React from "react";
 import LabelFilter from "./LabelFilter";
 import { createEmptyFilter, PullRequestFilter } from "./PullRequestFilter";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Checkbox from "@mui/material/Checkbox";
+import { useGhProfile } from "../Profile/useGhProfile";
 
 export default function Dashboard() {
+  const ghProfile = useGhProfile()
+
   const [pullRequestFilter, setPullRequestFilter] = React.useState<PullRequestFilter>(() => {
     const stored = localStorage.getItem('pullRequestFilter');
     if (stored === null) {
@@ -18,8 +23,8 @@ export default function Dashboard() {
 
   const handleChangeRepositories = (selectedRepositories: any) => {
     const newPullRequestFilter: PullRequestFilter = {
+      ...pullRequestFilter,
       repositories: selectedRepositories,
-      labels: pullRequestFilter.labels
     }
 
     setPullRequestFilter(newPullRequestFilter)
@@ -28,8 +33,18 @@ export default function Dashboard() {
 
   const handleChangeLabels = (selectedLabels: any) => {
     const newPullRequestFilter: PullRequestFilter = {
-      repositories: pullRequestFilter.repositories,
+      ...pullRequestFilter,
       labels: selectedLabels
+    }
+
+    setPullRequestFilter(newPullRequestFilter)
+    localStorage.setItem('pullRequestFilter', JSON.stringify(newPullRequestFilter))
+  };
+
+  const handleFilterApprovedChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newPullRequestFilter: PullRequestFilter = {
+      ...pullRequestFilter,
+      filterApproved: event.target.checked
     }
 
     setPullRequestFilter(newPullRequestFilter)
@@ -51,7 +66,7 @@ export default function Dashboard() {
             Pull Requests
           </Navbar.Brand>
           <Navbar.Collapse className="justify-content-end">
-            <Profile/>
+            <Profile ghProfile={ghProfile}/>
           </Navbar.Collapse>
         </Container>
       </Navbar>
@@ -64,11 +79,12 @@ export default function Dashboard() {
             <LabelFilter pullRequestFilter={pullRequestFilter} onSelectedLabelsChange={handleChangeLabels}/>
           </Col>
           <Col md={3}>
+            <FormControlLabel control={<Checkbox onChange={handleFilterApprovedChange} checked={pullRequestFilter.filterApproved} />} label="Filter out approved PRs" />
           </Col>
         </Row>
         <Row style={{marginTop: '20px'}}>
           <Col>
-            <PullRequestTable pullRequestFilter={pullRequestFilter}/>
+            <PullRequestTable ghProfile={ghProfile} pullRequestFilter={pullRequestFilter}/>
           </Col>
         </Row>
       </Container>

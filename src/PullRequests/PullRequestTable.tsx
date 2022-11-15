@@ -1,21 +1,23 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { DataGrid, GridColDef, GridRenderCellParams, } from '@mui/x-data-grid';
-import { getJsonResponse, getResponse } from "../GitHub/Api";
 import { Avatar, AvatarGroup, Badge, Chip, Link } from "@mui/material";
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import JiraLink from "./JiraLink";
-import { createEmptyFilter, PullRequestFilter } from "./PullRequestFilter";
+import { PullRequestFilter } from "./PullRequestFilter";
 import { getLabelStyle, GithubLabel } from "../GitHub/GithubLabel";
 import PullRequestChanges from "./PullRequestChanges";
 import ReviewStatus from "./ReviewStatus";
+import { fetchPullRequests } from './fetchPullRequests';
+import { GhProfile } from '../Profile/useGhProfile';
 
 TimeAgo.addDefaultLocale(en)
 let timeAgo = new TimeAgo();
 
 export interface PullRequestTableProps {
   pullRequestFilter: PullRequestFilter,
+  ghProfile: GhProfile,
 }
 
 const columns: GridColDef[] = [
@@ -33,7 +35,7 @@ const columns: GridColDef[] = [
         <span>
           {
             (params.getValue(params.id, 'labels') as any).map((label: GithubLabel) => {
-              return (<Chip label={label.name} size="small" style={getLabelStyle(label)} sx={{height: 18}}/>)
+              return (<Chip label={label.name} key={params.id} size="small" style={getLabelStyle(label)} sx={{height: 18}}/>)
             })
           }
         </span>
@@ -48,7 +50,7 @@ const columns: GridColDef[] = [
     flex: 1,
     sortable: false,
     renderCell: params => (
-      <ReviewStatus pullRequest={params.getValue(params.id, 'pullRequest') as any}/>
+      <ReviewStatus reviews={params.row.reviews} />
     )
   },
   {
@@ -77,6 +79,7 @@ const columns: GridColDef[] = [
           />}
           label={params.value}
           variant="outlined"
+          key={params.id}
         />
       </Link>
     )
@@ -108,7 +111,7 @@ const columns: GridColDef[] = [
         <AvatarGroup>
           {
             (params.value as any).map((user: any) => {
-              return (<Avatar alt={user.login} src={user.avatar_url} sx={{width: 26, height: 26}}/>)
+              return (<Avatar key={user.id} alt={user.login} src={user.avatar_url} sx={{width: 26, height: 26}}/>)
             })
           }
         </AvatarGroup>
@@ -122,7 +125,7 @@ const columns: GridColDef[] = [
     headerAlign: 'center',
     flex: 0.5,
     renderCell: params => (
-      <Badge badgeContent={params.getValue(params.id, 'comments')} color="primary" showZero>
+      <Badge key={params.id} badgeContent={params.getValue(params.id, 'comments')} color="primary" showZero>
         <QuestionAnswerIcon color="disabled"/>
       </Badge>
     )
@@ -143,7 +146,7 @@ const columns: GridColDef[] = [
 export default function PullRequestTable(props: PullRequestTableProps) {
   const [rows, setRows] = React.useState<any[]>([])
 
-  const loadPullRequests = async (): Promise<void> => {
+  const loadPullRequests = useCallback(async (): Promise<void> => {
     setRows([])
     let filters = ''
 
@@ -159,46 +162,37 @@ export default function PullRequestTable(props: PullRequestTableProps) {
       filters = ' org:BrandEmbassy'
     }
 
-    const issuesResponse = await getJsonResponse('/search/issues?q=' + encodeURIComponent('is:pr is:open ' + filters))
+    let rows = await fetchPullRequests(filters)
+    setRows(rows)
+  }, [props.pullRequestFilter.labels, props.pullRequestFilter.repositories])
 
-    issuesResponse.items.map((pr: any) => {
-      return getResponse(pr.pull_request.url)
-        .then(response => response.json())
-        .then(pullRequest => {
-          const row = {
-            id: pullRequest.number,
-            number: pullRequest.number,
-            title: pullRequest.title,
-            author: pullRequest.user.login,
-            labels: pullRequest.labels,
-            link: pullRequest.html_url,
-            repository: pullRequest.base.repo.name,
-            avatarUrl: pullRequest.user.avatar_url,
-            createdAt: pullRequest.created_at,
-            assignees: pullRequest.assignees,
-            comments: pullRequest.comments + pullRequest.review_comments,
-            pullRequest: pullRequest,
-            changes: pullRequest.additions + pullRequest.deletions,
-            reviews: ''
-          }
 
-          setRows(
-            rows => [...rows, row]
-              .sort((a: any, b: any): number => {
-                return a.createdAt < b.createdAt ? 1 : -1
-              }))
-        })
+  const filteredRows = useMemo(() => {
+    if (!props.pullRequestFilter.filterApproved) {
+      return rows
+    }
+
+    return rows.filter((pr) => {
+      const myReview = (pr.reviews as Array<any>).find((review) => review.user.id === props.ghProfile.id)
+
+      if (!myReview) {
+        return true
+      }
+      console.log(myReview);
+
+      return myReview.state !== "APPROVED"
     })
-  }
+
+  }, [props.ghProfile.id, props.pullRequestFilter.filterApproved, rows])
 
   React.useEffect(() => {
     loadPullRequests()
-  }, [props.pullRequestFilter]);
+  }, [loadPullRequests, props.pullRequestFilter]);
 
   return (
     <div style={{display: 'flex', marginBottom: '20px'}}>
       <DataGrid
-        rows={rows}
+        rows={filteredRows}
         columns={columns}
         hideFooter
         autoHeight

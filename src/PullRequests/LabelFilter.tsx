@@ -38,6 +38,7 @@ export default function LabelFilter(props: LabelFilterProps) {
 
   React.useEffect(() => {
     loadLabels()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.pullRequestFilter]);
 
   const handleChange = (event: React.SyntheticEvent, value: Array<string>): void => {

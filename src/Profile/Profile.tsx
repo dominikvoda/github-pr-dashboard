@@ -1,23 +1,15 @@
-import React from 'react';
-import { getJsonResponse } from "../GitHub/Api";
 import { Avatar } from "@mui/material";
 import Logout from "./Logout";
 
-export default function Profile() {
-  const [ghProfile, setGhProfile] = React.useState({name: '', avatar_url: '', login: null})
-  const [profileLoaded, setProfileLoaded] = React.useState(false);
+interface ProfileProps {
+  ghProfile: {
+    avatar_url: string,
+    name: string,
+  },
+}
 
-  const loadProfile = async (): Promise<void> => {
-    const profileData = await getJsonResponse('/user')
-    setGhProfile(profileData);
-    setProfileLoaded(true)
-  }
+export default function Profile({ghProfile}: ProfileProps): JSX.Element {
 
-  React.useEffect(() => {
-    if (!profileLoaded) {
-      loadProfile()
-    }
-  });
 
   return (
     <div className="d-flex align-items-center" style={{color: '#ffffff'}}>

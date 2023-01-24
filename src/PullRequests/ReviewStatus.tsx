@@ -30,7 +30,12 @@ export default function ReviewStatus({reviews}: ReviewStatusProps) {
               style={{marginRight: '5px'}}
               key={review.id}
             >
-            <Avatar alt={review.user.login} src={review.user.avatar_url} sx={{ width: 24, height: 24 }} />
+            <Avatar
+              title={review.user.login}
+              alt={review.user.login}
+              src={review.user.avatar_url}
+              sx={{ width: 24, height: 24 }}
+            />
           </Badge>
         )
       })}

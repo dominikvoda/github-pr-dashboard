@@ -6,11 +6,12 @@ import en from 'javascript-time-ago/locale/en'
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import JiraLink from "./JiraLink";
 import { PullRequestFilter } from "./PullRequestFilter";
-import { getLabelStyle, GithubLabel } from "../GitHub/GithubLabel";
+import { GithubLabel } from "../GitHub/GithubLabel";
 import PullRequestChanges from "./PullRequestChanges";
 import ReviewStatus from "./ReviewStatus";
 import { fetchPullRequests } from './fetchPullRequests';
 import { GhProfile } from '../Profile/useGhProfile';
+import { PullRequestTitle } from './PullRequestTitle';
 
 TimeAgo.addDefaultLocale(en)
 let timeAgo = new TimeAgo();
@@ -26,20 +27,7 @@ const columns: GridColDef[] = [
     headerName: 'Title',
     flex: 3,
     renderCell: params => (
-      <div>
-        <Link href={params.getValue(params.id, 'link') as string}
-              target={'_blank'}
-              underline={'hover'}>
-          {params.value}
-        </Link>
-        <span>
-          {
-            (params.getValue(params.id, 'labels') as any).map((label: GithubLabel) => {
-              return (<Chip label={label.name} key={params.id} size="small" style={getLabelStyle(label)} sx={{height: 18}}/>)
-            })
-          }
-        </span>
-      </div>
+      <PullRequestTitle params={params} />
     )
   },
   {

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { DataGrid, GridColDef, GridRenderCellParams, } from '@mui/x-data-grid';
 import { Avatar, AvatarGroup, Badge, Chip, Link } from "@mui/material";
 import TimeAgo from 'javascript-time-ago'
@@ -6,10 +6,8 @@ import en from 'javascript-time-ago/locale/en'
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import JiraLink from "./JiraLink";
 import { PullRequestFilter } from "./PullRequestFilter";
-import { GithubLabel } from "../GitHub/GithubLabel";
 import PullRequestChanges from "./PullRequestChanges";
 import ReviewStatus from "./ReviewStatus";
-import { fetchPullRequests } from './fetchPullRequests';
 import { GhProfile } from '../Profile/useGhProfile';
 import { PullRequestTitle } from './PullRequestTitle';
 
@@ -17,6 +15,7 @@ TimeAgo.addDefaultLocale(en)
 let timeAgo = new TimeAgo();
 
 export interface PullRequestTableProps {
+  rows: any[],
   pullRequestFilter: PullRequestFilter,
   ghProfile: GhProfile,
 }
@@ -132,50 +131,22 @@ const columns: GridColDef[] = [
 ];
 
 export default function PullRequestTable(props: PullRequestTableProps) {
-  const [rows, setRows] = React.useState<any[]>([])
-
-  const loadPullRequests = useCallback(async (): Promise<void> => {
-    setRows([])
-    let filters = ''
-
-    props.pullRequestFilter.repositories.forEach((repository: any) => (
-      filters += ' repo:BrandEmbassy/' + repository
-    ))
-
-    props.pullRequestFilter.labels.forEach((label: GithubLabel) => (
-      filters += ' label:"' + label.name + '"'
-    ))
-
-    if (filters === '') {
-      filters = ' org:BrandEmbassy'
-    }
-
-    let rows = await fetchPullRequests(filters)
-    setRows(rows)
-  }, [props.pullRequestFilter.labels, props.pullRequestFilter.repositories])
-
-
   const filteredRows = useMemo(() => {
     if (!props.pullRequestFilter.filterApproved) {
-      return rows
+      return props.rows
     }
 
-    return rows.filter((pr) => {
+    return props.rows.filter((pr) => {
       const myReview = (pr.reviews as Array<any>).find((review) => review.user.id === props.ghProfile.id)
 
       if (!myReview) {
         return true
       }
-      console.log(myReview);
 
       return myReview.state !== "APPROVED"
     })
 
-  }, [props.ghProfile.id, props.pullRequestFilter.filterApproved, rows])
-
-  React.useEffect(() => {
-    loadPullRequests()
-  }, [loadPullRequests, props.pullRequestFilter]);
+  }, [props.ghProfile.id, props.pullRequestFilter.filterApproved, props.rows])
 
   return (
     <div style={{display: 'flex', marginBottom: '20px'}}>

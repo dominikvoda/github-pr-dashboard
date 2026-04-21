@@ -17,3 +17,8 @@ ReactDOM.render(
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
+
+// Register service worker for notification click handling
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+}

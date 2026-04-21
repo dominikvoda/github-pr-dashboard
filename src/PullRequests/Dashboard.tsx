@@ -2,12 +2,15 @@ import { Col, Container, Navbar, Row } from "react-bootstrap";
 import RepositoryFilter from "./RepositoryFilter";
 import Profile from "../Profile/Profile";
 import PullRequestTable from "./PullRequestTable";
-import React from "react";
+import React, { useMemo } from "react";
 import LabelFilter from "./LabelFilter";
 import { createEmptyFilter, PullRequestFilter } from "./PullRequestFilter";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Checkbox from "@mui/material/Checkbox";
 import { useGhProfile } from "../Profile/useGhProfile";
+import { usePolling } from "../hooks/usePolling";
+import { buildFilterString } from "./buildFilterString";
+import NotificationToggle from "../notifications/NotificationToggle";
 
 export default function Dashboard() {
   const ghProfile = useGhProfile()
@@ -20,6 +23,9 @@ export default function Dashboard() {
 
     return JSON.parse(stored);
   });
+
+  const filters = useMemo(() => buildFilterString(pullRequestFilter), [pullRequestFilter.repositories, pullRequestFilter.labels])
+  const { rows, isLoading, lastPollTime } = usePolling(filters)
 
   const handleChangeRepositories = (selectedRepositories: any) => {
     const newPullRequestFilter: PullRequestFilter = {
@@ -66,6 +72,7 @@ export default function Dashboard() {
             Pull Requests
           </Navbar.Brand>
           <Navbar.Collapse className="justify-content-end">
+            <NotificationToggle />
             <Profile ghProfile={ghProfile}/>
           </Navbar.Collapse>
         </Container>
@@ -78,13 +85,21 @@ export default function Dashboard() {
           <Col md={3}>
             <LabelFilter pullRequestFilter={pullRequestFilter} onSelectedLabelsChange={handleChangeLabels}/>
           </Col>
-          <Col md={3}>
+          <Col md={2}>
             <FormControlLabel control={<Checkbox onChange={handleFilterApprovedChange} checked={pullRequestFilter.filterApproved} />} label="Filter out approved PRs" />
+          </Col>
+          <Col md={2} className="d-flex align-items-center justify-content-end">
+            {isLoading && <span style={{color: '#666', fontSize: '0.85rem'}}>Refreshing…</span>}
+            {!isLoading && lastPollTime && (
+              <span style={{color: '#999', fontSize: '0.85rem'}}>
+                Updated {lastPollTime.toLocaleTimeString()}
+              </span>
+            )}
           </Col>
         </Row>
         <Row style={{marginTop: '20px'}}>
           <Col>
-            <PullRequestTable ghProfile={ghProfile} pullRequestFilter={pullRequestFilter}/>
+            <PullRequestTable rows={rows} ghProfile={ghProfile} pullRequestFilter={pullRequestFilter}/>
           </Col>
         </Row>
       </Container>

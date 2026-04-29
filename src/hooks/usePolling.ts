@@ -63,10 +63,15 @@ export function usePolling(filters: string): UsePollingResult {
       const isFirstEver = isFirstFetchRef.current && seenKeysRef.current.size === 0
       isFirstFetchRef.current = false
 
-      if (isFirstEver || isFilterChange) {
-        // Seed/merge: don't notify
-        console.log('[Polling] Seeding', fetchedKeys.size, 'PRs as seen (firstEver:', isFirstEver, 'filterChange:', isFilterChange, ')')
+      if (isFirstEver) {
+        // First load with no prior history: seed with currently visible PRs
+        console.log('[Polling] Seeding', fetchedKeys.size, 'PRs as seen (firstEver)')
         fetchedKeys.forEach(key => seenKeysRef.current!.add(key))
+      } else if (isFilterChange) {
+        // Filter changed: reset seen to exactly the currently-visible set so a PR
+        // that later enters this filter view notifies, even if it was seen under a prior filter
+        console.log('[Polling] Resetting seen to', fetchedKeys.size, 'PRs (filterChange)')
+        seenKeysRef.current = new Set(fetchedKeys)
       } else {
         // Notify for genuinely new PRs
         const newPrs: string[] = []

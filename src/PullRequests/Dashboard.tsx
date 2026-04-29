@@ -11,6 +11,7 @@ import { useGhProfile } from "../Profile/useGhProfile";
 import { usePolling } from "../hooks/usePolling";
 import { buildFilterString } from "./buildFilterString";
 import NotificationToggle from "../notifications/NotificationToggle";
+import RateLimitBanner from "../GitHub/RateLimitBanner";
 
 export default function Dashboard() {
   const ghProfile = useGhProfile()
@@ -25,7 +26,7 @@ export default function Dashboard() {
   });
 
   const filters = useMemo(() => buildFilterString(pullRequestFilter), [pullRequestFilter.repositories, pullRequestFilter.labels])
-  const { rows, isLoading, lastPollTime } = usePolling(filters)
+  const { rows, isLoading, lastPollTime, error } = usePolling(filters)
 
   const handleChangeRepositories = (selectedRepositories: any) => {
     const newPullRequestFilter: PullRequestFilter = {
@@ -79,6 +80,11 @@ export default function Dashboard() {
       </Navbar>
       <Container fluid style={{marginTop: '20px'}}>
         <Row>
+          <Col>
+            <RateLimitBanner />
+          </Col>
+        </Row>
+        <Row>
           <Col md={5}>
             <RepositoryFilter pullRequestFilter={pullRequestFilter} onSelectedRepositoriesChange={handleChangeRepositories}/>
           </Col>
@@ -90,7 +96,12 @@ export default function Dashboard() {
           </Col>
           <Col md={2} className="d-flex align-items-center justify-content-end">
             {isLoading && <span style={{color: '#666', fontSize: '0.85rem'}}>Refreshing…</span>}
-            {!isLoading && lastPollTime && (
+            {!isLoading && error && (
+              <span title={error} style={{color: '#ab003c', fontSize: '0.85rem'}}>
+                Refresh failed{lastPollTime ? ` — last update ${lastPollTime.toLocaleTimeString()}` : ''}
+              </span>
+            )}
+            {!isLoading && !error && lastPollTime && (
               <span style={{color: '#999', fontSize: '0.85rem'}}>
                 Updated {lastPollTime.toLocaleTimeString()}
               </span>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchPullRequests } from '../PullRequests/fetchPullRequests'
+import { isPollingPaused } from '../GitHub/Api'
 import { loadSeenPrKeys, saveSeenPrKeys, makePrKey } from '../notifications/seenPrStore'
 import { showPrNotification } from '../notifications/notificationService'
 
@@ -9,12 +10,14 @@ interface UsePollingResult {
   rows: any[]
   isLoading: boolean
   lastPollTime: Date | null
+  error: string | null
 }
 
 export function usePolling(filters: string): UsePollingResult {
   const [rows, setRows] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [lastPollTime, setLastPollTime] = useState<Date | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const seenKeysRef = useRef<Set<string> | null>(null)
@@ -27,11 +30,22 @@ export function usePolling(filters: string): UsePollingResult {
 
   const poll = useCallback(async (isFilterChange: boolean) => {
     if (isFetchingRef.current) return
+    if (isPollingPaused()) {
+      console.log('[Polling] Skipped — GitHub rate limit low')
+      return
+    }
     isFetchingRef.current = true
     setIsLoading(true)
 
     try {
-      const fetchedRows = await fetchPullRequests(filtersRef.current)
+      const fetchedRows = await fetchPullRequests(filtersRef.current).catch((e: unknown) => {
+        console.error('[Polling] Fetch failed:', e)
+        setError(e instanceof Error ? e.message : String(e))
+        return null
+      })
+      if (fetchedRows === null) return
+
+      setError(null)
       setRows(fetchedRows)
       setLastPollTime(new Date())
 
@@ -111,5 +125,5 @@ export function usePolling(filters: string): UsePollingResult {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [poll])
 
-  return { rows, isLoading, lastPollTime }
+  return { rows, isLoading, lastPollTime, error }
 }

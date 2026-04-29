@@ -9,6 +9,26 @@ export interface LabelFilterProps {
   onSelectedLabelsChange: (selectedLabels: any) => void
 }
 
+const LABEL_CACHE_TTL_MS = 5 * 60 * 1000
+const labelCache = new Map<string, { labels: GithubLabel[]; expiresAt: number }>()
+
+const labelCacheKey = (repository: string): string => {
+  const token = localStorage.getItem('githubToken') ?? ''
+  return token + ':' + repository
+}
+
+const loadLabelsInRepository = async (repository: string): Promise<GithubLabel[]> => {
+  const key = labelCacheKey(repository)
+  const cached = labelCache.get(key)
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.labels
+  }
+
+  const labels: GithubLabel[] = await getJsonResponse('/repos/BrandEmbassy/' + repository + '/labels')
+  labelCache.set(key, { labels, expiresAt: Date.now() + LABEL_CACHE_TTL_MS })
+  return labels
+}
+
 export default function LabelFilter(props: LabelFilterProps) {
   const [allLabels, setAllLabels] = React.useState<GithubLabel[]>([]);
 
@@ -30,10 +50,6 @@ export default function LabelFilter(props: LabelFilterProps) {
 
       setAllLabels(filteredLabels)
     })
-  }
-
-  const loadLabelsInRepository = async (repository: string): Promise<GithubLabel[]> => {
-    return await getJsonResponse('/repos/BrandEmbassy/' + repository + '/labels')
   }
 
   React.useEffect(() => {

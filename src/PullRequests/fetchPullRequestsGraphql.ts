@@ -94,6 +94,7 @@ export const dedupReviews = (
   for (const review of sorted) {
     const userId = review.author?.databaseId
     if (userId === undefined || userId === null) continue
+    if (review.databaseId === null) continue
     if (prAuthorDatabaseId !== undefined && userId === prAuthorDatabaseId) continue
     if (seen.has(userId)) continue
 

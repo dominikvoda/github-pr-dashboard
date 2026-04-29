@@ -40,7 +40,7 @@ export default function RateLimitBanner() {
       {lowPools.map(({ name, state }) => (
         <div key={name}>
           GitHub {name} rate limit low: {state.remaining} requests remaining,
-          resets {formatReset(state.resetAt)}. Polling paused until reset.
+          resets {formatReset(state.resetAt)}.{name === 'GraphQL' ? ' Polling paused until reset.' : ''}
         </div>
       ))}
     </Alert>

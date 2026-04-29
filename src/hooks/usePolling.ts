@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchPullRequests } from '../PullRequests/fetchPullRequests'
+import { isPollingPaused } from '../GitHub/Api'
 import { loadSeenPrKeys, saveSeenPrKeys, makePrKey } from '../notifications/seenPrStore'
 import { showPrNotification } from '../notifications/notificationService'
 
@@ -9,12 +10,14 @@ interface UsePollingResult {
   rows: any[]
   isLoading: boolean
   lastPollTime: Date | null
+  error: string | null
 }
 
 export function usePolling(filters: string): UsePollingResult {
   const [rows, setRows] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [lastPollTime, setLastPollTime] = useState<Date | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const seenKeysRef = useRef<Set<string> | null>(null)
@@ -27,11 +30,22 @@ export function usePolling(filters: string): UsePollingResult {
 
   const poll = useCallback(async (isFilterChange: boolean) => {
     if (isFetchingRef.current) return
+    if (isPollingPaused()) {
+      console.log('[Polling] Skipped — GitHub rate limit low')
+      return
+    }
     isFetchingRef.current = true
     setIsLoading(true)
 
     try {
-      const fetchedRows = await fetchPullRequests(filtersRef.current)
+      const fetchedRows = await fetchPullRequests(filtersRef.current).catch((e: unknown) => {
+        console.error('[Polling] Fetch failed:', e)
+        setError(e instanceof Error ? e.message : String(e))
+        return null
+      })
+      if (fetchedRows === null) return
+
+      setError(null)
       setRows(fetchedRows)
       setLastPollTime(new Date())
 
@@ -49,10 +63,15 @@ export function usePolling(filters: string): UsePollingResult {
       const isFirstEver = isFirstFetchRef.current && seenKeysRef.current.size === 0
       isFirstFetchRef.current = false
 
-      if (isFirstEver || isFilterChange) {
-        // Seed/merge: don't notify
-        console.log('[Polling] Seeding', fetchedKeys.size, 'PRs as seen (firstEver:', isFirstEver, 'filterChange:', isFilterChange, ')')
+      if (isFirstEver) {
+        // First load with no prior history: seed with currently visible PRs
+        console.log('[Polling] Seeding', fetchedKeys.size, 'PRs as seen (firstEver)')
         fetchedKeys.forEach(key => seenKeysRef.current!.add(key))
+      } else if (isFilterChange) {
+        // Filter changed: reset seen to exactly the currently-visible set so a PR
+        // that later enters this filter view notifies, even if it was seen under a prior filter
+        console.log('[Polling] Resetting seen to', fetchedKeys.size, 'PRs (filterChange)')
+        seenKeysRef.current = new Set(fetchedKeys)
       } else {
         // Notify for genuinely new PRs
         const newPrs: string[] = []
@@ -111,5 +130,5 @@ export function usePolling(filters: string): UsePollingResult {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [poll])
 
-  return { rows, isLoading, lastPollTime }
+  return { rows, isLoading, lastPollTime, error }
 }

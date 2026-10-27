@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { DataGrid, GridColDef, GridRenderCellParams, } from '@mui/x-data-grid';
-import { Avatar, AvatarGroup, Badge, Chip, Link } from "@mui/material";
+import { Avatar, AvatarGroup, Badge, Chip, Link, Tooltip } from "@mui/material";
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
@@ -56,19 +56,27 @@ const columns: GridColDef[] = [
     align: 'center',
     headerAlign: 'center',
     flex: 1,
+    minWidth: 180,
     renderCell: params => (
-      <Link href={'https://github.com/' + params.value} target={'_blank'} underline={'hover'}>
-        <Chip
-          avatar={<Avatar
-            alt={params.value as string}
-            src={params.getValue(params.id, 'avatarUrl') as string}
-            sx={{width: 26, height: 26}}
-          />}
-          label={params.value}
-          variant="outlined"
-          key={params.id}
-        />
-      </Link>
+      <Tooltip title={params.value as string} placement="top" arrow>
+        <Link
+          href={'https://github.com/' + params.value}
+          target={'_blank'}
+          underline={'hover'}
+          sx={{display: 'flex', maxWidth: '100%', minWidth: 0}}
+        >
+          <Chip
+            avatar={<Avatar
+              alt={params.value as string}
+              src={params.getValue(params.id, 'avatarUrl') as string}
+              sx={{width: 26, height: 26}}
+            />}
+            label={params.value}
+            variant="outlined"
+            key={params.id}
+          />
+        </Link>
+      </Tooltip>
     )
   },
   {

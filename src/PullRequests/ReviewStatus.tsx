@@ -1,4 +1,4 @@
-import { Avatar, Badge, CircularProgress } from "@mui/material";
+import { Avatar, Badge, CircularProgress, Tooltip } from "@mui/material";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TextsmsIcon from '@mui/icons-material/Textsms';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -23,20 +23,20 @@ export default function ReviewStatus({reviews}: ReviewStatusProps) {
     <div>
       {reviews.map((review: any) => {
         return (
+          <Tooltip title={review.user.login} placement="top" arrow key={review.id}>
             <Badge
               overlap="circular"
               anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
               badgeContent={reviewStatus[review.state]}
               style={{marginRight: '5px'}}
-              key={review.id}
             >
-            <Avatar
-              title={review.user.login}
-              alt={review.user.login}
-              src={review.user.avatar_url}
-              sx={{ width: 24, height: 24 }}
-            />
-          </Badge>
+              <Avatar
+                alt={review.user.login}
+                src={review.user.avatar_url}
+                sx={{ width: 24, height: 24 }}
+              />
+            </Badge>
+          </Tooltip>
         )
       })}
     </div>
